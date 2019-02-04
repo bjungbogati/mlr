@@ -1,0 +1,10 @@
+---
+title: "MLR-practice1"
+author: "Binod Jung Bogati"
+date: "1/21/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```

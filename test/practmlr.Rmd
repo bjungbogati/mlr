@@ -1,0 +1,91 @@
+---
+title: "MLR pract"
+author: "Binod Jung Bogati"
+date: "1/21/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# set working directory
+setwd("/home/bjungbogati/Desktop/data_science/Courses/Books/mlr_pack")
+
+```
+
+# Load libraries
+
+```{r}
+library(mlr)
+```
+
+# 1. Load Data
+
+```{r}
+train <- read.csv("train_loan.csv", na.strings = c("", " ", NA))
+test <- read.csv("test_loan.csv", na.strings = c("", " ", NA))
+```
+
+# 2. Exploring Data
+
+```{r}
+summarizeColumns(train)
+```
+
+```{r}
+summarizeColumns(test)
+```
+
+
+```{r}
+hist(train$ApplicantIncome, breaks = 300, main = "Applicant Income Chart", xlab = "Coapplicant Income")
+```
+
+```{r}
+hist(train$CoapplicantIncome, breaks = 100, main = "Coapplicant Income Chart")
+```
+
+```{r}
+boxplot(train$ApplicantIncome)
+```
+
+```{r}
+boxplot(train$LoanAmount)
+```
+
+Changing to factor : Credit_History
+
+```{r}
+train$Credit_History <- as.factor(train$Credit_History)
+
+test$Credit_History <- as.factor(test$Credit_History)
+
+```
+
+```{r}
+class(train$Credit_History)
+```
+
+```{r}
+summary(train)
+summary(test)
+```
+
+```{r}
+levels(train$Dependents)[4] <- "3"
+
+levels(test$Dependents)[4] <- "3"
+```
+
+3. Missing value imputation
+
+
+
+
+
+
+
+
+
