@@ -1,0 +1,161 @@
+---
+title: "House Pricing"
+author: "Binod Jung Bogati"
+date: "2/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+House price
+
+```{r}
+library(dplyr)
+train <- readr::read_csv("./data/house_prices/train.csv", 
+                         col_names = TRUE)
+
+test <- readr::read_csv("./data/house_prices/test.csv", 
+                        col_names = TRUE)
+
+# problems with names of some variables having ticks
+
+names(train) <- make.names(names(train))
+names(test) <- make.names(names(test))
+
+# select all char varibales and get their names
+
+is_char <- sapply(train, is.character)
+to_correct <- names(select(train, which(is_char)))
+
+# correct data type of variable
+
+train_correct_type <- train %>% 
+  mutate_each_(funs(factor), to_correct)
+
+#glimpse(train_correct_type)
+```
+
+```{r}
+levels(train_correct_type$BsmtQual)
+
+is.ordered(train_correct_type$BsmtQual)
+
+```
+
+
+```{r}
+# install.packages("extracat")
+
+## extracat::visna(train_correct_type, sort = "b")
+
+
+
+```
+
+
+### Keeping simple
+
+```{r}
+nums <- sapply(train_correct_type, is.numeric)
+train_no_factors <- train_correct_type[, nums]
+
+train_no_factors <- train_no_factors %>% 
+  select(-Id) %>% 
+  na.omit()
+
+glimpse(train_no_factors)
+```
+
+
+### Outliers
+
+```{r}
+# pl <- GGally::ggpairs(train_no_factors)
+# pl
+```
+
+
+```{r}
+plot(train_no_factors$SalePrice, train_no_factors$GrLivArea)
+```
+
+
+```{r}
+# remove outliers
+
+train <- train_correct_type %>% 
+  filter(GrLivArea < 4000)
+```
+
+### Inspecting numeric variables correlated with the response variable
+
+```{r}
+corrplot::corrplot(cor(train_no_factors), method = "circle", type = "lower", diag = FALSE, 
+                   order = "FPC", tl.cex = 0.6, tl.col = "black")
+```
+
+### Regression
+
+Machine Learning Tasks
+
+```{r}
+library(mlr)
+
+# first row is Id
+
+regr_task <- makeRegrTask(id = "hprices", data = train[, 2:81], target = "SalePrice")
+
+regr_task
+```
+
+
+### Learner
+
+```{r}
+# generate the learner
+
+lrn <- makeLearner("regr.gbm", par.vals = list(n.trees = 1400,
+                                               interaction.depth = 3))
+```
+
+### Train
+
+```{r}
+# training the learner
+
+mod <- train(lrn, regr_task)
+
+mod
+```
+
+### Predictions
+
+```{r}
+task_pred <- predict(mod, newdata = test[, 2:80])
+
+task_pred
+```
+
+
+```{r}
+library(tibble)
+
+submission <- as_tibble(list(Id = test$Id, SalePrice = task_pred$data$response))
+
+head(submission)
+
+# Save
+
+readr::write_csv(submission, path = "./data/house_prices/submission_mlr.csv")
+```
+
+
+
+
+
+
+
+
+

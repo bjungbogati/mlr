@@ -1,0 +1,178 @@
+---
+title: "Titanic Survival"
+author: "Binod Jung Bogati"
+date: "2/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Titanic: Machine Learning from Disaster
+
+- Titanic sinking on April 15, 1912
+- Data provided on our website goo.gl/DYzSmA
+- 809 out of 1309 passengers got killed
+- Task
+  - I Can we predict who survived?
+  - I Why did people die / Which groups?
+
+
+### Load the packages and data
+
+```{r}
+library(mlr)
+
+load("titanic.rda")
+
+str(data)
+```
+
+### Pre-processing
+
+```{r}
+print(summarizeColumns(data)[, -c(5, 6, 7)], digits = 0)
+
+# set empty factor levels to NA
+
+data$Embarked[data$Embarked == ""] = NA
+data$Embarked = droplevels(data$Embarked)
+data$Cabin[data$Cabin == ""] = NA
+data$Cabin = droplevels(data$Cabin)
+
+
+```
+
+```{r}
+library(BBmisc)
+library(stringi)
+
+# price per person, multiple tickets by one person
+
+data$farePp = data$Fare / (data$Parch + data$Sibsp + 1)
+
+# the deck can be extracted from the cabin number
+
+data$deck = as.factor(stri_sub(data$Cabin, 1, 1))
+
+# Starboard had an odd number, portside even cabin numbers
+
+data$portside = stri_extract_last_regex(data$Cabin, "[0-9]")
+data$portside = as.numeric(data$portside) %% 2
+
+# drop stuff we cannot easily model on
+
+data = dropNamed(data, 
+                 c("Cabin", "PassengerId", "Ticket", "Name"))
+
+print(summarizeColumns(data)[, -c(5, 6, 7)], digits = 0)
+```
+
+- Impute missing numeric values with median, missing factor values with a separate category
+
+- NB: This is really naive, we should probably embed this in cross-validation
+
+
+```{r}
+# imputation
+
+data = impute(data, cols = list(
+  Age = imputeMedian(), 
+  Fare = imputeMedian(), 
+  Embarked = imputeConstant("__mins__"), 
+  farePp = imputeMedian(), 
+  deck = imputeConstant("__mins__"), 
+  portside = imputeConstant("__mins__")
+))
+
+data = data$data
+
+data = convertDataFrameCols(data, chars.as.factor = TRUE)
+
+head(data)
+```
+
+### Task
+
+```{r}
+# making task 
+task = makeClassifTask(id = "titanic", data = data,
+                       target = "Survived", positive = "1")
+
+print(task)
+```
+
+### What MLR algorithms are available?
+
+```{r}
+tab = listLearners(task, warn.missing.packages = FALSE)
+tab[1:5, c("class", "package")]
+```
+
+### Learner
+
+```{r}
+lrn = makeLearner("classif.kknn", k = 3, predict.type = "prob")
+
+print(lrn)
+```
+
+## Train
+
+```{r}
+set.seed(123)
+
+n = getTaskSize(task)
+
+train = sample(n, size = 2/3 * n)
+
+test = setdiff(1:n, train)
+
+head(sort(train))
+
+head(sort(test))
+
+mod = train(lrn, task, subset = train)
+
+```
+
+### Model
+
+```{r}
+print(mod)
+
+
+rmodel = getLearnerModel(mod)
+```
+
+### Predict
+
+```{r}
+pred = predict(mod, task = task, subset = test)
+head(as.data.frame(pred))
+
+
+head(getPredictionProbabilities(pred))
+```
+
+### Performance
+
+```{r}
+performance(pred, measures = list(mlr::acc, mlr::auc))
+```
+
+### External Validation Set
+
+Predict on data not included in the task
+
+```{r}
+test.data = dropNamed(data[test, ], "Survived")
+pred = predict(mod, newdata = data[test, ])
+performance(pred, measures = list(mlr::acc, mlr::auc))
+
+```
+
+
+

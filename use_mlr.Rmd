@@ -1,0 +1,103 @@
+---
+title: "Use MLR"
+author: "Binod Jung Bogati"
+date: "2/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load libraries and data
+
+The data was taken from Mercedes-Benz Greener Manufacturing on Kaggle.
+
+```{r}
+library(digest)
+library(mlr)           # Machine learning in R
+library(parallelMap)   # Parallelization of ML model   
+
+set.seed(1991)
+
+list.files("./data/mercedes")
+
+train = read.csv("./data/mercedes/train.csv", stringsAsFactors = F)
+test = read.csv("./data/mercedes/test.csv", stringsAsFactors = F)
+```
+
+# Remove unwanted variables
+
+```{r}
+remove <- c("ID", "X0", "X1", "X2","X3", "X4", "X5", "X6", "X8")
+
+train <- train[, setdiff(names(train), remove)]
+
+# shuffle training set prior to modeling in case ID's are sorted
+
+train <- train[sample(nrow(train)), ]
+
+```
+
+```{r}
+# setup modelling mlr environment
+
+# define machine learning task
+
+ml_task <- makeRegrTask(data = train, 
+                        target = "y")
+
+# create repeated cross validation folds
+
+cv_folds <- makeResampleDesc("CV", iters = 3)
+
+
+# Define model tuning algorithm ~ Random tune algorithm
+
+random_tune <- makeTuneControlRandom(maxit = 1) # iteration for illustration
+
+# define model
+# install.packages("xgboost")
+
+model <- makeLearner("regr.xgboost") # regression XGBoost model
+
+# define parameters of model and search grid 
+
+model_Params <- makeParamSet(
+  makeIntegerParam("nrounds", lower= 10, upper=20), 
+  makeIntegerParam("max_depth", lower=1, upper=5), 
+  makeNumericParam("lambda", lower=0.55, upper=0.60), 
+  makeNumericParam("eta", lower=0.001, upper=0.5),
+  makeNumericParam("subsample", lower = 0.10, upper = 0.80),
+  makeNumericParam("min_child_weight", lower = 1, upper = 5), 
+  makeNumericParam("colsample_bytree", lower = 0.2, upper = 0.8)
+
+)
+```
+
+
+### Speed up
+
+Speed up training time initiate the numbers of cores R using parallelMap library.
+
+```{r}
+# define number of CPU cores to use when training mode ls
+parallelStartSocket(2)
+
+
+```
+
+## Tune model
+
+```{r}
+tuned_model <- tuneParams(learner = model, 
+                          task = ml_task, 
+                          resampling = cv_folds, 
+                          measures = rsq, 
+                          par.set = model_Params, 
+                          control = random_tune, 
+                          show.info = FALSE)
+```
+
+
+
