@@ -2,7 +2,7 @@
 library("mlr")
 
 # loading data
-wbcd <- read.csv("./data/mlrbook/wisc_data.csv", stringsAsFactors = F)
+wbcd <- read.csv("./data/mlrbook/wisc_bc_data.csv", stringsAsFactors = F)
 
 # seeing head
 
@@ -26,8 +26,8 @@ test.wbcd <- wbcd[-ind,]
 
 ## creating a task
 
-trainTask <- makeClassifTask(data = train.wbcd, target = "Upvotes")
-testTask <- makeClassifTask(data = test.wbcd, target = "Upvotes")
+trainTask <- makeClassifTask(data = train.wbcd, target = "diagnosis")
+testTask <- makeClassifTask(data = test.wbcd, target = "diagnosis")
 
 # check if class has postivity or not
 class(trainTask)
@@ -55,7 +55,7 @@ rf_param <- makeParamSet(
   makeIntegerParam("nodesize", lower = 10, upper = 50)
 )
 
-rancontrol <- makeTuneControlRandom(maxit = 50L)
+rancontrol <- makeTuneControlGrid(resolution=10L)
 
 # set 10 fold cross validation
 
@@ -69,8 +69,6 @@ rf_tune <- tuneParams(learner = rf, resampling = set_cv, task = trainTask,
 
 # cv accuracy
 rf_tune$y
-
-
 
 # best parameters
 
