@@ -1,4 +1,4 @@
-# A Demo projects done with MLR Packages
+# Projects done with MLR Packages
 
 A collection of machine learning projects done with MLR.
 
